@@ -1,167 +1,164 @@
-document.addEventListener('DOMContentLoaded', function () {
-    // --- Manejo de la información de las áreas clickeables ---
-    const infoDivs = document.querySelectorAll('#info > div');
-    const areas = document.querySelectorAll('area');
-    const tabs = document.querySelectorAll('.tab');
-    const mapContainers = document.querySelectorAll('.map-container');
+ document.addEventListener('DOMContentLoaded', function () {
+            // --- Configuración estilo Leaflet ---
+            const mapConfig = {
+                imageSize: [600, 0], // Se calculará automáticamente
+                bounds: {
+                    min: [0, 0],
+                    max: [600, 0] // Se calculará automáticamente
+                },
+                defaultZoom: 1,
+                minZoom: 1,
+                maxZoom: 4,
+                zoomDelta: 0.5,
+                initialCenter: [300, 300] // Centro inicial [x, y]
+            };
 
-    function hideAllInfo() {
-        infoDivs.forEach(div => div.style.display = 'none');
-    }
+            // --- Elementos del DOM ---
+            const mapa = document.getElementById('mapa');
+            const container = mapa.parentElement;
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const resetBtn = document.getElementById('reset-btn');
 
-    function showInfo(type, title) {
-        hideAllInfo();
-        const selectedDiv = document.getElementById('info-' + type);
-        if (selectedDiv) {
-            selectedDiv.style.display = 'block';
-            const h2 = selectedDiv.querySelector('.infmap h2');
-            if (h2) {
-                h2.textContent = title;
+            // --- Variables de estado ---
+            let zoomLevel = mapConfig.defaultZoom;
+            let isDragging = false;
+            let startX, startY;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            // --- Inicialización ---
+            function initMap() {
+                // Calcular dimensiones reales de la imagen
+                mapConfig.imageSize = [mapa.width, mapa.height];
+                mapConfig.bounds.max = [mapa.width, mapa.height];
+                
+                // Configurar centro inicial si no está definido
+                if (!mapConfig.initialCenter) {
+                    mapConfig.initialCenter = [mapa.width / 2, mapa.height / 2];
+                }
+                
+                // Centrar el mapa inicialmente
+                const [centerX, centerY] = mapConfig.initialCenter;
+                offsetX = (container.clientWidth / 2) - (centerX * mapConfig.defaultZoom);
+                offsetY = (container.clientHeight / 2) - (centerY * mapConfig.defaultZoom);
+                
+                applyTransform();
             }
-        }
-    }
 
-    areas.forEach(area => {
-        area.addEventListener('click', (event) => {
-            event.preventDefault();
-            const type = area.dataset.type;
-            const title = area.title;
-            showInfo(type, title);
-        });
-    });
+            // --- Funciones principales ---
+            function limitOffset() {
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                const [imgWidth, imgHeight] = mapConfig.imageSize;
+                
+                const scaledWidth = imgWidth * zoomLevel;
+                const scaledHeight = imgHeight * zoomLevel;
+                
+                const maxOffsetX = Math.max(0, (scaledWidth - containerWidth) / 2);
+                const maxOffsetY = Math.max(0, (scaledHeight - containerHeight) / 2);
+                
+                offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
+                offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
+            }
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const mapId = tab.dataset.map;
-            mapContainers.forEach(container => {
-                container.classList.remove('active');
+            function applyTransform() {
+                limitOffset();
+                mapa.style.transform = `scale(${zoomLevel})`;
+                mapa.style.left = `${offsetX}px`;
+                mapa.style.top = `${offsetY}px`;
+            }
+
+            function setZoom(newZoom, centerX, centerY) {
+                const oldZoom = zoomLevel;
+                zoomLevel = Math.max(mapConfig.minZoom, Math.min(mapConfig.maxZoom, newZoom));
+                
+                // Si se especifica un centro, ajustar el offset para mantenerlo en la misma posición
+                if (centerX !== undefined && centerY !== undefined) {
+                    const containerRect = container.getBoundingClientRect();
+                    const mouseX = centerX - containerRect.left;
+                    const mouseY = centerY - containerRect.top;
+                    
+                    offsetX = mouseX - (mouseX - offsetX) * (zoomLevel / oldZoom);
+                    offsetY = mouseY - (mouseY - offsetY) * (zoomLevel / oldZoom);
+                    
+                    mapa.style.transformOrigin = `${mouseX - offsetX}px ${mouseY - offsetY}px`;
+                }
+                
+                applyTransform();
+                updateCursor();
+            }
+
+            function updateCursor() {
+                mapa.style.cursor = zoomLevel > mapConfig.defaultZoom ? 'grab' : 'default';
+            }
+
+            // --- Eventos ---
+            // Zoom con rueda del mouse
+            container.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                const delta = e.deltaY < 0 ? mapConfig.zoomDelta : -mapConfig.zoomDelta;
+                const rect = container.getBoundingClientRect();
+                const centerX = e.clientX - rect.left;
+                const centerY = e.clientY - rect.top;
+                setZoom(zoomLevel + delta, centerX, centerY);
             });
-            document.getElementById(mapId).classList.add('active');
+
+            // Zoom con botones
+            zoomInBtn.addEventListener('click', () => setZoom(zoomLevel + mapConfig.zoomDelta));
+            zoomOutBtn.addEventListener('click', () => setZoom(zoomLevel - mapConfig.zoomDelta));
+            resetBtn.addEventListener('click', () => {
+                zoomLevel = mapConfig.defaultZoom;
+                const [centerX, centerY] = mapConfig.initialCenter;
+                offsetX = (container.clientWidth / 2) - (centerX * mapConfig.defaultZoom);
+                offsetY = (container.clientHeight / 2) - (centerY * mapConfig.defaultZoom);
+                applyTransform();
+            });
+
+            // Arrastre del mapa
+            mapa.addEventListener('mousedown', function(e) {
+                if (zoomLevel <= mapConfig.defaultZoom) return;
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                mapa.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging || zoomLevel <= mapConfig.defaultZoom) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                offsetX += dx;
+                offsetY += dy;
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                applyTransform();
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                updateCursor();
+            });
+
+            // Doble clic para zoom
+            mapa.addEventListener('dblclick', function(e) {
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const centerX = e.clientX - rect.left;
+                const centerY = e.clientY - rect.top;
+                
+                if (zoomLevel > mapConfig.defaultZoom) {
+                    setZoom(mapConfig.defaultZoom);
+                } else {
+                    setZoom(mapConfig.maxZoom, centerX, centerY);
+                }
+            });
+
+            // Inicializar el mapa cuando la imagen cargue
+            mapa.onload = initMap;
+            if (mapa.complete) initMap();
         });
-    });
-
-    // Ocultar toda la información inicialmente
-    hideAllInfo();
-
-    // --- Funcionalidad de zoom y desplazamiento ---
-    const mapa = document.getElementById('mapa');
-    const container = mapa.parentElement; // El contenedor del mapa
-    let zoomLevel = 1;
-    const maxZoom = 3; // Nivel máximo de zoom
-    const minZoom = 1;
-    let isZoomed = false; // Para controlar si está en zoom o no
-    let isDragging = false;
-    let startX, startY;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    // Establecer las dimensiones fijas del mapa en 600px de ancho
-    const mapaWidth = 600;
-    mapa.style.width = `${mapaWidth}px`;
-
-    const mapaHeight = mapa.clientHeight; // Mantener el alto original de la imagen
-
-    // Evento de clic para hacer zoom o quitar el zoom
-    mapa.addEventListener('click', function (event) {
-        // Solo hacer zoom si el clic no es en un área clickeable
-        const target = event.target.closest('area');
-        if (target) return; // No hacer zoom si se clickeó en un área
-
-        const rect = mapa.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
-
-        // Alternar entre zoom y deszoom
-        if (isZoomed) {
-            // Si ya está en zoom, quitar el zoom
-            zoomLevel = minZoom;
-            offsetX = 0;
-            offsetY = 0;
-            mapa.style.transform = `scale(${zoomLevel})`;
-            mapa.style.left = `${offsetX}px`;
-            mapa.style.top = `${offsetY}px`;
-            isZoomed = false; // Se ha quitado el zoom
-            mapa.style.cursor = 'default'; // Restablece el cursor
-        } else {
-            // Si no está en zoom, hacer zoom
-            zoomLevel = maxZoom;
-            isZoomed = true;
-            // Calcula el nuevo origen del zoom
-            const centerX = clickX / rect.width * 100;
-            const centerY = clickY / rect.height * 100;
-
-            // Aplica el zoom
-            mapa.style.transform = `scale(${zoomLevel})`;
-            mapa.style.transformOrigin = `${centerX}% ${centerY}%`;
-            mapa.style.cursor = 'grab'; // Cambia el cursor para el desplazamiento
-        }
-    });
-
-    // Evento para seguir el cursor cuando esté en zoom
-    mapa.addEventListener('mousemove', function (e) {
-        if (!isZoomed) return; // Solo mover el mapa si está en zoom
-
-        // No permitir mover el mapa si no se ha hecho clic
-        if (!isDragging) return;
-
-        e.preventDefault();
-
-        // Calcula el desplazamiento basado en el movimiento del ratón
-        const dx = (e.pageX - startX) * (6 / zoomLevel); // Desplazamiento horizontal
-        const dy = (e.pageY - startY) * (6 / zoomLevel); // Desplazamiento vertical
-
-        offsetX -= dx; // Ajusta la posición horizontal
-        offsetY -= dy; // Ajusta la posición vertical
-
-
-        // Aplica el nuevo desplazamiento
-        mapa.style.left = `${offsetX}px`;
-        mapa.style.top = `${offsetY}px`;
-
-        // Actualiza las posiciones iniciales del ratón
-        startX = e.pageX;
-        startY = e.pageY;
-    });
-
-    // Evento para iniciar el desplazamiento cuando está en zoom
-    mapa.addEventListener('mousemove', function (e) {
-    if (!isZoomed) return;
-
-    const rect = container.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    // Distancia del cursor al centro
-    const dx = mouseX - centerX;
-    const dy = mouseY - centerY;
-
-    // Sensibilidad del movimiento (ajustable)
-    const sensitivity = 0.05;
-
-    offsetX -= dx * sensitivity;
-    offsetY -= dy * sensitivity;
-
-    mapa.style.left = `${offsetX}px`;
-    mapa.style.top = `${offsetY}px`;
-});
-
-    // Detener el desplazamiento
-    mapa.addEventListener('mouseup', () => {
-        if (isZoomed) {
-            isDragging = false;
-            mapa.style.cursor = 'grab'; // Cambia el cursor al soltar
-        }
-    });
-
-    mapa.addEventListener('mouseleave', () => {
-        if (isZoomed) {
-            isDragging = false;
-            mapa.style.cursor = 'grab'; // Cambia el cursor al salir del área del mapa
-        }
-    });
-});
