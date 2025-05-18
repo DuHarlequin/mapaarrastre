@@ -17,15 +17,6 @@
             width: 100vw;
             height: 100vh;
         }
-        
-        /* Estilo personalizado para los marcadores */
-        .custom-marker {
-            background-color: red;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid white;
-        }
     </style>
 </head>
 <body>
@@ -43,11 +34,9 @@
             crs: L.CRS.Simple
         }).setView([96, 128], 1.5);
         
-        // Dimensiones de la imagen del mapa (ajustadas según tu imagen)
-        // La imagen tiene relación de aspecto ~1.33:1 (1920x1440 px)
-        const mapHeight = 192;
-        const mapWidth = 256; // Manteniendo tus proporciones originales
-        const mapBounds = [[0, 0], [mapHeight, mapWidth]];
+        // Dimensiones de la imagen del mapa (1920x1440px → relación 1.33:1)
+        // Mantenemos tus dimensiones originales (192x256) pero ajustadas a tu imagen
+        const mapBounds = [[0, 0], [192, 256]];
         
         // Añadir la imagen del mapa desde Imgur
         L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', mapBounds).addTo(map);
@@ -55,34 +44,19 @@
         // Establecer los límites del mapa
         map.setMaxBounds(mapBounds);
         
-        // Función para crear marcadores personalizados
-        function createCustomMarker(lat, lng, title) {
-            const marker = L.marker([lat, lng], {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: '',
-                    iconSize: [24, 24]
-                })
-            }).addTo(map);
-            
-            if (title) {
-                marker.bindPopup(title);
-            }
-            
-            return marker;
-        }
+        // Añadir marcador "Oracle" con el icono predeterminado de Leaflet
+        // (Coordenadas de ejemplo - ajústalas según tu mapa)
+        const oracleMarker = L.marker([80, 120]).addTo(map);
+        oracleMarker.bindPopup("Oracle");
         
-        // Ejemplo: Añadir marcador "Oracle" (coordenadas de ejemplo)
-        // Deberás ajustar las coordenadas según tu mapa
-        createCustomMarker(80, 120, "Oracle");
-        
-        // Opcional: Añadir escala en millas
+        // Añadir escala en kilómetros (exclusivamente Leaflet)
         L.control.scale({
-            imperial: true,
-            metric: false
+            imperial: false,  // Desactivar millas
+            metric: true,     // Activar kilómetros
+            position: 'bottomleft'
         }).addTo(map);
         
-        // Opcional: Añadir controles de zoom
+        // Añadir controles de zoom estándar de Leaflet
         L.control.zoom({
             position: 'topright'
         }).addTo(map);
