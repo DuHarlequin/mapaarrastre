@@ -47,8 +47,8 @@
     
     <script>
         // 1. CONFIGURACIÓN DE ESCALA (100km)
-        const imageWidthPixels = 4100;   // Ancho en píxeles
-        const imageHeightPixels = 3146; // Alto en píxeles
+        const imageWidthPixels = 3146;   // Ancho en píxeles
+        const imageHeightPixels = 4100; // Alto en píxeles
         const imageWidthKm = 100;        // Ancho deseado en km (100km)
         
         // Calcular relación píxeles/km
@@ -78,7 +78,7 @@
         ]).addTo(map);
 
         // 5. CONFIGURAR VISTA INICIAL (zoom 0 = vista de 100km)
-        map.setView([bounds[1][0]/2, bounds[1][1]/2], 0);
+        map.setView([bounds[1][0]/2, bounds[1][1]/2], 3.1);
 
         // 6. ACTUALIZAR INFO DE ESCALA
         function updateScaleInfo() {
