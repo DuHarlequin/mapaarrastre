@@ -1,21 +1,91 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html>
 <head>
-  <title>mapa arrastre</title>
-  <meta charset="utf-8" />
+    <title>Mapa de Ezaros World Region</title>
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Estilo personalizado para los marcadores */
+        .custom-marker {
+            background-color: red;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+    </style>
 </head>
 <body>
-<!-- partial:index.partial.html -->
-<img id="mapa" src="https://i.imgur.com/2W2bOOt.jpeg" alt="Mapa">
+    <div id="map"></div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-
+    
+    <script>
+        // Configuración inicial del mapa
+        const map = L.map('map', {
+            minZoom: 1,
+            maxZoom: 10,
+            zoomDelta: 0.5,
+            crs: L.CRS.Simple
+        }).setView([96, 128], 1.5);
+        
+        // Dimensiones de la imagen del mapa (ajustadas según tu imagen)
+        // La imagen tiene relación de aspecto ~1.33:1 (1920x1440 px)
+        const mapHeight = 192;
+        const mapWidth = 256; // Manteniendo tus proporciones originales
+        const mapBounds = [[0, 0], [mapHeight, mapWidth]];
+        
+        // Añadir la imagen del mapa desde Imgur
+        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', mapBounds).addTo(map);
+        
+        // Establecer los límites del mapa
+        map.setMaxBounds(mapBounds);
+        
+        // Función para crear marcadores personalizados
+        function createCustomMarker(lat, lng, title) {
+            const marker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: '',
+                    iconSize: [24, 24]
+                })
+            }).addTo(map);
+            
+            if (title) {
+                marker.bindPopup(title);
+            }
+            
+            return marker;
+        }
+        
+        // Ejemplo: Añadir marcador "Oracle" (coordenadas de ejemplo)
+        // Deberás ajustar las coordenadas según tu mapa
+        createCustomMarker(80, 120, "Oracle");
+        
+        // Opcional: Añadir escala en millas
+        L.control.scale({
+            imperial: true,
+            metric: false
+        }).addTo(map);
+        
+        // Opcional: Añadir controles de zoom
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
+    </script>
 </body>
 </html>
