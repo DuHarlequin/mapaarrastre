@@ -54,7 +54,7 @@
             zoomDelta: 0.3, // Pasos más suaves
             crs: L.CRS.Simple,
             zoomControl: false
-        }).setView([96, 128], 8);  // Aumentamos el zoom inicial
+        }).setView([96, 128], 6);  // Aumentamos el zoom inicial
 
         // Dimensiones reales de tu imagen (1920x1440px)
         const imageWidth = 4100;
@@ -73,8 +73,8 @@
 
         // Ajustamos el zoom máximo para que no se pueda alejar demasiado
         map.on('zoomend', function() {
-            if (map.getZoom() < 8) {
-                map.setZoom(8);
+            if (map.getZoom() < 6) {
+                map.setZoom(6);
             }
         });
         
