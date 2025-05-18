@@ -1,0 +1,16 @@
+.map-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    max-width: 800px;
+    height: 600px;
+    margin: 0 auto;
+    cursor: grab; /* Cambia el cursor al arrastrar */
+}
+
+#mapa {
+    position: absolute;
+    width: 100%;
+    height: auto;
+    transition: transform 0.3s ease;
+}
