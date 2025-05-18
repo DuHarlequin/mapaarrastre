@@ -39,7 +39,6 @@
     <div id="map"></div>
     <div id="controls">
         <button id="addMarkerBtn">Añadir Marcador</button>
-        <button id="saveMarkersBtn">Guardar Marcadores</button>
         <div id="markerInfo"></div>
     </div>
     
@@ -83,7 +82,6 @@
 
         // Elementos de la interfaz
         const addMarkerBtn = document.getElementById('addMarkerBtn');
-        const saveMarkersBtn = document.getElementById('saveMarkersBtn');
         const markerInfo = document.getElementById('markerInfo');
 
         // Función para convertir coordenadas del mapa a coordenadas relativas
@@ -161,28 +159,6 @@
                 map.off('click', addMarkerOnClick);
             }
         }
-
-        // Evento para guardar marcadores
-        saveMarkersBtn.addEventListener('click', function() {
-            const dataStr = JSON.stringify(markers.map(m => {
-                return {
-                    name: m.name,
-                    x: m.coords.x,
-                    y: m.coords.y
-                };
-            }), null, 2);
-            
-            const blob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'marcadores.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
     </script>
 </body>
 </html>
