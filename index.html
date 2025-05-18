@@ -17,30 +17,10 @@
             width: 100vw;
             height: 100vh;
         }
-        #controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-        }
-        button {
-            padding: 5px 10px;
-            margin: 5px 0;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-        <div id="controls">
-        <button id="addMarkerBtn">Añadir Marcador</button>
-        <button id="saveMarkersBtn">Guardar Marcadores</button>
-        <div id="markerInfo"></div>
-    </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -52,7 +32,6 @@
             maxZoom: 10,
             zoomDelta: 0.5,
             crs: L.CRS.Simple
-            zoomControl: false 
         }).setView([96, 128], 1.5);
         
         // Dimensiones de la imagen del mapa (1920x1440px → relación 1.33:1)
@@ -64,12 +43,6 @@
         
         // Establecer los límites del mapa
         map.setMaxBounds(mapBounds);
-
-         // Definimos las coordenadas del mapa
-        const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
-        const northEast = map.unproject([imageWidth, 0], map.getMaxZoom()-1);
-        const bounds = new L.LatLngBounds(southWest, northEast);
-        
         
         // Añadir marcador "Oracle" con el icono predeterminado de Leaflet
         // (Coordenadas de ejemplo - ajústalas según tu mapa)
@@ -82,30 +55,11 @@
             metric: true,     // Activar kilómetros
             position: 'bottomleft'
         }).addTo(map);
-
-        // Variables para manejar marcadores
-        let markers = [];
-        let isAddingMarker = false;
-        let markerCounter = 1;
-
-        // Elementos de la interfaz
-        const addMarkerBtn = document.getElementById('addMarkerBtn');
-        const saveMarkersBtn = document.getElementById('saveMarkersBtn');
-        const markerInfo = document.getElementById('markerInfo');
-
-         // Función para convertir coordenadas del mapa a píxeles
-        function toPixelCoordinates(latlng) {
-            const point = map.project(latlng, map.getMaxZoom()-1);
-            return {
-                x: Math.round(point.x),
-                y: Math.round(point.y)
-            };
-        }
-
-
-         // Ejemplo: Añadir marcador inicial (opcional)
-        // addMarker(map.unproject([1200, 900], map.getMaxZoom()-1), "Oracle");
-
+        
+        // Añadir controles de zoom estándar de Leaflet
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
     </script>
 </body>
 </html>
