@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa de Ezaros World Region</title>
+    <title>Mapa Interactivo (4100×3146)</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -47,45 +47,37 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // Configuración del mapa
+        // 1. CONFIGURACIÓN INICIAL DEL MAPA
         const map = L.map('map', {
-            minZoom: 7,  // Aumentamos el zoom mínimo para que se vea más cercano
+            minZoom: 1,
             maxZoom: 10,
-            zoomDelta: 0.3, // Pasos más suaves
+            zoomDelta: 0.5,
             crs: L.CRS.Simple,
             zoomControl: false
-        }).setView([96, 128], 7);  // Aumentamos el zoom inicial
-
-        // Dimensiones reales de tu imagen (1920x1440px)
-        const imageWidth = 4100;
-        const imageHeight = 3146;
-        
-        // Definimos las coordenadas del mapa
-        const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
-        const northEast = map.unproject([imageWidth, 0], map.getMaxZoom()-1);
-        const bounds = new L.LatLngBounds(southWest, northEast);
-        
-        // Añadir la imagen del mapa
-        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
-        
-        // Establecer los límites del mapa con padding para que no se salga
-        map.setMaxBounds(bounds.pad(0.5));
-
-        // Ajustamos el zoom máximo para que no se pueda alejar demasiado
-        map.on('zoomend', function() {
-            if (map.getZoom() < 7) {
-                map.setZoom(7);
-            }
         });
-        
-        // Añadir escala en kilómetros
+
+        // 2. DIMENSIONES DE LA IMAGEN (4100×3146 píxeles)
+        const imageWidth = 4100;   // Ancho (X)
+        const imageHeight = 3146;  // Alto (Y)
+
+        // 3. DEFINIR LÍMITES DEL MAPA (en coordenadas [Y, X])
+        const bounds = [[0, 0], [imageHeight, imageWidth]];
+        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
+        map.setMaxBounds(bounds);
+
+        // 4. CENTRAR Y ESTABLECER ZOOM INICIAL (7)
+        const centerY = imageHeight / 2;  // 1573
+        const centerX = imageWidth / 2;   // 2050
+        map.setView([centerY, centerX], 7);  // Zoom inicial 7
+
+        // 5. ESCALA EN KILÓMETROS
         L.control.scale({
             imperial: false,
             metric: true,
             position: 'bottomleft'
         }).addTo(map);
 
-        // Variables para manejar marcadores
+        // 6. FUNCIONALIDAD DE MARCADORES
         let markers = [];
         let isAddingMarker = false;
         let markerCounter = 1;
@@ -95,52 +87,45 @@
         const saveMarkersBtn = document.getElementById('saveMarkersBtn');
         const markerInfo = document.getElementById('markerInfo');
 
-        // Función para convertir coordenadas del mapa a píxeles
-        function toPixelCoordinates(latlng) {
-            const point = map.project(latlng, map.getMaxZoom()-1);
-            return {
-                x: Math.round(point.x),
-                y: Math.round(point.y)
-            };
+        // Función para convertir píxeles a coordenadas del mapa
+        function pixelToCoords(x, y) {
+            return [y, x];  // Leaflet usa [Y, X]
         }
 
-        // Función para añadir un marcador
-        function addMarker(latlng, name = null) {
+        // Añadir marcador
+        function addMarker(coords, name = null) {
             const nameToUse = name || `Marcador ${markerCounter++}`;
-            const marker = L.marker(latlng, {
+            const marker = L.marker(coords, {
                 draggable: true
             }).addTo(map);
             
             marker.bindPopup(nameToUse);
-            marker.on('click', function() {
-                marker.openPopup();
-            });
             
             markers.push({
                 marker: marker,
                 name: nameToUse,
-                coords: toPixelCoordinates(latlng)
+                coords: coords,
+                pixelCoords: [Math.round(coords[1]), Math.round(coords[0])]  // [X, Y]
             });
             
             updateMarkerInfo();
-            return marker;
         }
 
-        // Función para actualizar la información de marcadores
+        // Actualizar lista de marcadores
         function updateMarkerInfo() {
             markerInfo.innerHTML = `<h3>Marcadores (${markers.length})</h3>`;
             markers.forEach((m, i) => {
                 markerInfo.innerHTML += `
                     <div>
                         ${i+1}. ${m.name} 
-                        (X: ${m.coords.x}, Y: ${m.coords.y})
+                        (X: ${m.pixelCoords[0]}, Y: ${m.pixelCoords[1]})
                         <button onclick="removeMarker(${i})">Eliminar</button>
                     </div>
                 `;
             });
         }
 
-        // Función para eliminar marcador
+        // Eliminar marcador
         window.removeMarker = function(index) {
             map.removeLayer(markers[index].marker);
             markers.splice(index, 1);
@@ -153,48 +138,41 @@
             this.textContent = isAddingMarker ? 'Cancelar' : 'Añadir Marcador';
             
             if (isAddingMarker) {
-                map.on('click', addMarkerOnClick);
+                map.on('click', function(e) {
+                    const name = prompt("Nombre del marcador:");
+                    if (name) {
+                        addMarker([e.latlng.lat, e.latlng.lng], name);
+                    }
+                    isAddingMarker = false;
+                    addMarkerBtn.textContent = 'Añadir Marcador';
+                    map.off('click');
+                });
             } else {
-                map.off('click', addMarkerOnClick);
+                map.off('click');
             }
         });
 
-        function addMarkerOnClick(e) {
-            const name = prompt("Nombre del marcador:", `Marcador ${markerCounter}`);
-            if (name !== null) {
-                addMarker(e.latlng, name);
-                isAddingMarker = false;
-                addMarkerBtn.textContent = 'Añadir Marcador';
-                map.off('click', addMarkerOnClick);
-            }
-        }
-
-        // Evento para guardar marcadores
+        // Guardar marcadores en JSON
         saveMarkersBtn.addEventListener('click', function() {
-            const dataStr = JSON.stringify(markers.map(m => {
-                return {
-                    name: m.name,
-                    x: m.coords.x,
-                    y: m.coords.y
-                };
-            }), null, 2);
+            const data = markers.map(m => ({
+                name: m.name,
+                x: m.pixelCoords[0],
+                y: m.pixelCoords[1]
+            }));
             
-            const blob = new Blob([dataStr], {type: 'application/json'});
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             
             const a = document.createElement('a');
             a.href = url;
             a.download = 'marcadores.json';
-            document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
 
-        // Ajuste inicial para que el mapa se vea más cercano
+        // Ajuste final para asegurar la visualización
         setTimeout(() => {
             map.invalidateSize();
-            map.setZoom(3.5);
         }, 100);
     </script>
 </body>
