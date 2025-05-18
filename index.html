@@ -12,15 +12,36 @@
         body {
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
         }
         #map {
             width: 100vw;
             height: 100vh;
         }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        button {
+            padding: 5px 10px;
+            margin: 5px 0;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="controls">
+        <button id="addMarkerBtn">Añadir Marcador</button>
+        <button id="saveMarkersBtn">Guardar Marcadores</button>
+        <div id="markerInfo"></div>
+    </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -32,14 +53,14 @@
             maxZoom: 10,
             zoomDelta: 0.5,
             crs: L.CRS.Simple,
-            zoomControl: false  // Desactivamos el control por defecto para crear uno personalizado
+            zoomControl: false  // Desactivamos completamente los controles de zoom
         }).setView([96, 128], 1.5);
 
         // Dimensiones reales de tu imagen (1920x1440px)
         const imageWidth = 1920;
         const imageHeight = 1440;
         
-        // Definimos las coordenadas del mapa para que coincidan con las dimensiones de la imagen
+        // Definimos las coordenadas del mapa
         const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
         const northEast = map.unproject([imageWidth, 0], map.getMaxZoom()-1);
         const bounds = new L.LatLngBounds(southWest, northEast);
@@ -50,21 +71,121 @@
         // Establecer los límites del mapa
         map.setMaxBounds(bounds);
         
-        // Añadir control de zoom personalizado que sí funcionará
-        L.control.zoom({
-            position: 'topright'
-        }).addTo(map);
-        
         // Añadir escala en kilómetros
         L.control.scale({
             imperial: false,
             metric: true,
             position: 'bottomleft'
         }).addTo(map);
-        
-        // Añadir marcador (coordenadas ajustadas al nuevo sistema)
-        const oracleMarker = L.marker(map.unproject([1200, 900], map.getMaxZoom()-1)).addTo(map);
-        oracleMarker.bindPopup("Oracle");
+
+        // Variables para manejar marcadores
+        let markers = [];
+        let isAddingMarker = false;
+        let markerCounter = 1;
+
+        // Elementos de la interfaz
+        const addMarkerBtn = document.getElementById('addMarkerBtn');
+        const saveMarkersBtn = document.getElementById('saveMarkersBtn');
+        const markerInfo = document.getElementById('markerInfo');
+
+        // Función para convertir coordenadas del mapa a píxeles
+        function toPixelCoordinates(latlng) {
+            const point = map.project(latlng, map.getMaxZoom()-1);
+            return {
+                x: Math.round(point.x),
+                y: Math.round(point.y)
+            };
+        }
+
+        // Función para añadir un marcador
+        function addMarker(latlng, name = null) {
+            const nameToUse = name || `Marcador ${markerCounter++}`;
+            const marker = L.marker(latlng, {
+                draggable: true
+            }).addTo(map);
+            
+            marker.bindPopup(nameToUse);
+            marker.on('click', function() {
+                marker.openPopup();
+            });
+            
+            markers.push({
+                marker: marker,
+                name: nameToUse,
+                coords: toPixelCoordinates(latlng)
+            });
+            
+            updateMarkerInfo();
+            return marker;
+        }
+
+        // Función para actualizar la información de marcadores
+        function updateMarkerInfo() {
+            markerInfo.innerHTML = `<h3>Marcadores (${markers.length})</h3>`;
+            markers.forEach((m, i) => {
+                markerInfo.innerHTML += `
+                    <div>
+                        ${i+1}. ${m.name} 
+                        (X: ${m.coords.x}, Y: ${m.coords.y})
+                        <button onclick="removeMarker(${i})">Eliminar</button>
+                    </div>
+                `;
+            });
+        }
+
+        // Función para eliminar marcador
+        window.removeMarker = function(index) {
+            map.removeLayer(markers[index].marker);
+            markers.splice(index, 1);
+            updateMarkerInfo();
+        }
+
+        // Evento para añadir marcadores
+        addMarkerBtn.addEventListener('click', function() {
+            isAddingMarker = !isAddingMarker;
+            this.textContent = isAddingMarker ? 'Cancelar' : 'Añadir Marcador';
+            
+            if (isAddingMarker) {
+                map.on('click', addMarkerOnClick);
+            } else {
+                map.off('click', addMarkerOnClick);
+            }
+        });
+
+        function addMarkerOnClick(e) {
+            const name = prompt("Nombre del marcador:", `Marcador ${markerCounter}`);
+            if (name !== null) {
+                addMarker(e.latlng, name);
+                isAddingMarker = false;
+                addMarkerBtn.textContent = 'Añadir Marcador';
+                map.off('click', addMarkerOnClick);
+            }
+        }
+
+        // Evento para guardar marcadores
+        saveMarkersBtn.addEventListener('click', function() {
+            const dataStr = JSON.stringify(markers.map(m => {
+                return {
+                    name: m.name,
+                    x: m.coords.x,
+                    y: m.coords.y
+                };
+            }), null, 2);
+            
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'marcadores.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Ejemplo: Añadir marcador inicial (opcional)
+        // addMarker(map.unproject([1200, 900], map.getMaxZoom()-1), "Oracle");
     </script>
 </body>
 </html>
