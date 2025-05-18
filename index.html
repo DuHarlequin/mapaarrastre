@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa de Aeternalis</title>
+    <title>Mapa de Ezaros World Region</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -48,13 +48,14 @@
     <script>
         // Configuración del mapa
         const map = L.map('map', {
-            minZoom: 2,
+            minZoom: 1,
             maxZoom: 10,
             zoomDelta: 0.5,
-            crs: L.CRS.Simple
+            crs: L.CRS.Simple,
+            zoomControl: false // Deshabilitamos los controles de zoom
         }).setView([96, 128], 1.5);
 
-        // Definimos las coordenadas del mapa (ajustadas a la relación de aspecto de la imagen)
+        // Definimos las coordenadas del mapa
         const mapBounds = [[0, 0], [192, 256]];
         
         // Añadir la imagen del mapa
@@ -63,18 +64,6 @@
         // Establecer los límites del mapa
         map.setMaxBounds(mapBounds);
         
-        // Añadir escala en kilómetros
-        L.control.scale({
-            imperial: false,
-            metric: true,
-            position: 'bottomleft'
-        }).addTo(map);
-
-        // Añadir controles de zoom
-        L.control.zoom({
-            position: 'topright'
-        }).addTo(map);
-
         // Variables para manejar marcadores
         let markers = [];
         let isAddingMarker = false;
