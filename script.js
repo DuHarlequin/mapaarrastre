@@ -1,16 +1,16 @@
  document.addEventListener('DOMContentLoaded', function () {
             // --- Configuración estilo Leaflet ---
             const mapConfig = {
-                imageSize: [600, 0], // Se calculará automáticamente
+                imageSize: [1080, 0], // Se calculará automáticamente
                 bounds: {
                     min: [0, 0],
-                    max: [600, 0] // Se calculará automáticamente
+                    max: [1080, 0] // Se calculará automáticamente
                 },
                 defaultZoom: 1,
                 minZoom: 1,
                 maxZoom: 4,
                 zoomDelta: 0.5,
-                initialCenter: [300, 300] // Centro inicial [x, y]
+                initialCenter: [540, 540] // Centro inicial [x, y]
             };
 
             // --- Elementos del DOM ---
