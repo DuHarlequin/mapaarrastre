@@ -51,14 +51,14 @@
         const map = L.map('map', {
             minZoom: 3,  // Aumentamos el zoom mínimo para que se vea más cercano
             maxZoom: 10,
-            zoomDelta: 0.5,
+            zoomDelta: 0.3, // Pasos más suaves
             crs: L.CRS.Simple,
             zoomControl: false
         }).setView([96, 128], 5.5);  // Aumentamos el zoom inicial
 
         // Dimensiones reales de tu imagen (1920x1440px)
-        const imageWidth = 1920;
-        const imageHeight = 1440;
+        const imageWidth = 4100;
+        const imageHeight = 3146;
         
         // Definimos las coordenadas del mapa
         const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
@@ -74,7 +74,7 @@
         // Ajustamos el zoom máximo para que no se pueda alejar demasiado
         map.on('zoomend', function() {
             if (map.getZoom() < 3) {
-                map.setZoom(3);
+                map.setZoom(5);
             }
         });
         
