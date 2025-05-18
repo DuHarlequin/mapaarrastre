@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa con Zoom Personalizado</title>
+    <title>Mapa de Ezaros World Region</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -12,125 +12,59 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
         }
         #map {
             width: 100vw;
             height: 100vh;
         }
-        #controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-        }
-        button {
-            padding: 5px 10px;
-            margin: 5px 0;
-            cursor: pointer;
-        }
-        #scaleInfo {
-            margin-top: 10px;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="controls">
-        <button id="addMarkerBtn">Añadir Marcador</button>
-        <div id="scaleInfo"></div>
-    </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 1. PARÁMETROS DE CONFIGURACIÓN
-        const targetWidthKm = 166.1;  // Ancho deseado en zoom "0"
-        const targetHeightKm = 82.4;  // Alto deseado en zoom "0"
-        const zoomOffset = 3.5;       // Nuestro zoom "0" será el 3.5 original
-
-        // 2. CONFIGURACIÓN DEL MAPA (con CRS personalizado)
+        // Configuración del mapa
         const map = L.map('map', {
+            minZoom: 1,
+            maxZoom: 10,
+            zoomDelta: 0.5,
             crs: L.CRS.Simple,
-            minZoom: -5,
-            maxZoom: 5,
-            zoomSnap: 0.1,
-            zoomDelta: 0.2,
-            zoomControl: false
-        });
+            zoomControl: false  // Desactivamos el control por defecto para crear uno personalizado
+        }).setView([96, 128], 1.5);
 
-        // 3. CALCULAR RELACIÓN DE PÍXELES/KM
-        // (Asumiendo imagen de 4100x3146px para 166.1x82.4km en zoom "0")
-        const scaleX = 4100 / targetWidthKm;  // ~24.7 px/km
-        const scaleY = 3146 / targetHeightKm; // ~38.2 px/km
+        // Dimensiones reales de tu imagen (1920x1440px)
+        const imageWidth = 1920;
+        const imageHeight = 1440;
         
-        // 4. DEFINIR LÍMITES DEL MAPA (en km)
-        const bounds = [
-            [0, 0],
-            [targetHeightKm * (scaleY/scaleX), targetWidthKm]  // Ajustar proporción
-        ];
+        // Definimos las coordenadas del mapa para que coincidan con las dimensiones de la imagen
+        const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
+        const northEast = map.unproject([imageWidth, 0], map.getMaxZoom()-1);
+        const bounds = new L.LatLngBounds(southWest, northEast);
         
-        // 5. AÑADIR IMAGEN (ajustada a los límites calculados)
+        // Añadir la imagen del mapa
         L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
+        
+        // Establecer los límites del mapa
         map.setMaxBounds(bounds);
-
-        // 6. AJUSTAR ZOOM PARA QUE 3.5 SEA EL NUEVO "0"
-        map.setView([bounds[1][0]/2, bounds[1][1]/2], 0);  // Zoom "0" (equivalente a 3.5 original)
-
-        // 7. CONTROL DE ESCALA
+        
+        // Añadir control de zoom personalizado que sí funcionará
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
+        
+        // Añadir escala en kilómetros
         L.control.scale({
             imperial: false,
             metric: true,
             position: 'bottomleft'
         }).addTo(map);
-
-        // 8. FUNCIÓN PARA CONVERTIR ZOOM ORIGINAL A NUEVA ESCALA
-        function getAdjustedZoom(originalZoom) {
-            return originalZoom - zoomOffset;
-        }
-
-        // 9. ACTUALIZAR INFORMACIÓN DE ESCALA
-        function updateScaleInfo() {
-            const currentZoom = map.getZoom() + zoomOffset;  // Zoom original
-            const scale = Math.pow(2, currentZoom);
-            const currentWidthKm = targetWidthKm / scale;
-            const currentHeightKm = targetHeightKm / scale;
-            
-            document.getElementById('scaleInfo').innerHTML = `
-                <strong>Vista actual:</strong><br>
-                Zoom ajustado: ${map.getZoom().toFixed(1)}<br>
-                Zoom original: ${currentZoom.toFixed(1)}<br>
-                Ancho: ${currentWidthKm.toFixed(1)} km<br>
-                Alto: ${currentHeightKm.toFixed(1)} km
-            `;
-        }
-
-        // 10. FUNCIONALIDAD DE MARCADORES
-        const addMarkerBtn = document.getElementById('addMarkerBtn');
-        addMarkerBtn.addEventListener('click', function() {
-            const name = prompt("Nombre del marcador:");
-            if (name) {
-                map.once('click', function(e) {
-                    const marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
-                    marker.bindPopup(`
-                        <b>${name}</b><br>
-                        ${e.latlng.lat.toFixed(2)} km N, ${e.latlng.lng.toFixed(2)} km E
-                    `);
-                });
-                alert("Haz clic en el mapa para colocar el marcador");
-            }
-        });
-
-        // 11. INICIALIZACIÓN
-        map.on('zoomend moveend', updateScaleInfo);
-        updateScaleInfo();
-        setTimeout(() => map.invalidateSize(), 100);
+        
+        // Añadir marcador (coordenadas ajustadas al nuevo sistema)
+        const oracleMarker = L.marker(map.unproject([1200, 900], map.getMaxZoom()-1)).addTo(map);
+        oracleMarker.bindPopup("Oracle");
     </script>
 </body>
 </html>
