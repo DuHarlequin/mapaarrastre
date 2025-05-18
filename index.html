@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa Escalado a 100km</title>
+    <title>Mapa con Zoom Personalizado</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -33,105 +33,104 @@
             margin: 5px 0;
             cursor: pointer;
         }
+        #scaleInfo {
+            margin-top: 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="controls">
         <button id="addMarkerBtn">Añadir Marcador</button>
-        <div id="scaleInfo" style="margin-top: 10px;"></div>
+        <div id="scaleInfo"></div>
     </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 1. CONFIGURACIÓN DE ESCALA (100km)
-        const imageWidthPixels = 4100;   // Ancho en píxeles
-        const imageHeightPixels = 3146; // Alto en píxeles
-        const imageWidthKm = 100;        // Ancho deseado en km (100km)
-        
-        // Calcular relación píxeles/km
-        const pixelsPerKm = imageWidthPixels / imageWidthKm;
-        
-        // 2. CONFIGURACIÓN DEL MAPA
+        // 1. PARÁMETROS DE CONFIGURACIÓN
+        const targetWidthKm = 166.1;  // Ancho deseado en zoom "0"
+        const targetHeightKm = 82.4;  // Alto deseado en zoom "0"
+        const zoomOffset = 3.5;       // Nuestro zoom "0" será el 3.5 original
+
+        // 2. CONFIGURACIÓN DEL MAPA (con CRS personalizado)
         const map = L.map('map', {
             crs: L.CRS.Simple,
-            minZoom: -2,  // Permite alejarse más
+            minZoom: -5,
             maxZoom: 5,
             zoomSnap: 0.1,
             zoomDelta: 0.2,
-            wheelPxPerZoomLevel: 60,
             zoomControl: false
         });
 
-        // 3. DEFINIR LÍMITES (coordenadas [Y, X] en km)
+        // 3. CALCULAR RELACIÓN DE PÍXELES/KM
+        // (Asumiendo imagen de 4100x3146px para 166.1x82.4km en zoom "0")
+        const scaleX = 4100 / targetWidthKm;  // ~24.7 px/km
+        const scaleY = 3146 / targetHeightKm; // ~38.2 px/km
+        
+        // 4. DEFINIR LÍMITES DEL MAPA (en km)
         const bounds = [
             [0, 0],
-            [imageHeightPixels / pixelsPerKm, imageWidthKm] // [altura_km, ancho_km]
+            [targetHeightKm * (scaleY/scaleX), targetWidthKm]  // Ajustar proporción
         ];
         
-        // 4. AÑADIR IMAGEN
-        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', [
-            [0, 0],
-            [imageHeightPixels / pixelsPerKm, imageWidthKm]
-        ]).addTo(map);
+        // 5. AÑADIR IMAGEN (ajustada a los límites calculados)
+        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
+        map.setMaxBounds(bounds);
 
-        // 5. CONFIGURAR VISTA INICIAL (zoom 0 = vista de 100km)
-        map.setView([bounds[1][0]/2, bounds[1][1]/2], 3.1);
+        // 6. AJUSTAR ZOOM PARA QUE 3.5 SEA EL NUEVO "0"
+        map.setView([bounds[1][0]/2, bounds[1][1]/2], 0);  // Zoom "0" (equivalente a 3.5 original)
 
-        // 6. ACTUALIZAR INFO DE ESCALA
-        function updateScaleInfo() {
-            const center = map.getCenter();
-            const zoom = map.getZoom();
-            const bounds = map.getBounds();
-            const widthKm = bounds.getEast() - bounds.getWest();
-            const heightKm = bounds.getNorth() - bounds.getSouth();
-            
-            document.getElementById('scaleInfo').innerHTML = `
-                <strong>Vista actual:</strong><br>
-                Zoom: ${zoom.toFixed(1)}<br>
-                Ancho: ${widthKm.toFixed(1)} km<br>
-                Alto: ${heightKm.toFixed(1)} km
-            `;
-        }
-
-        // 7. CONTROL DE ESCALA EN KM
+        // 7. CONTROL DE ESCALA
         L.control.scale({
             imperial: false,
             metric: true,
-            maxWidth: 200,
             position: 'bottomleft'
         }).addTo(map);
 
-        // 8. FUNCIONALIDAD DE MARCADORES (adaptada a la nueva escala)
+        // 8. FUNCIÓN PARA CONVERTIR ZOOM ORIGINAL A NUEVA ESCALA
+        function getAdjustedZoom(originalZoom) {
+            return originalZoom - zoomOffset;
+        }
+
+        // 9. ACTUALIZAR INFORMACIÓN DE ESCALA
+        function updateScaleInfo() {
+            const currentZoom = map.getZoom() + zoomOffset;  // Zoom original
+            const scale = Math.pow(2, currentZoom);
+            const currentWidthKm = targetWidthKm / scale;
+            const currentHeightKm = targetHeightKm / scale;
+            
+            document.getElementById('scaleInfo').innerHTML = `
+                <strong>Vista actual:</strong><br>
+                Zoom ajustado: ${map.getZoom().toFixed(1)}<br>
+                Zoom original: ${currentZoom.toFixed(1)}<br>
+                Ancho: ${currentWidthKm.toFixed(1)} km<br>
+                Alto: ${currentHeightKm.toFixed(1)} km
+            `;
+        }
+
+        // 10. FUNCIONALIDAD DE MARCADORES
         const addMarkerBtn = document.getElementById('addMarkerBtn');
-        
         addMarkerBtn.addEventListener('click', function() {
             const name = prompt("Nombre del marcador:");
             if (name) {
                 map.once('click', function(e) {
-                    const marker = L.marker([e.latlng.lat, e.latlng.lng], {
-                        draggable: true
-                    }).addTo(map);
-                    
+                    const marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
                     marker.bindPopup(`
                         <b>${name}</b><br>
-                        Coordenadas: ${e.latlng.lat.toFixed(2)} km N, ${e.latlng.lng.toFixed(2)} km E
+                        ${e.latlng.lat.toFixed(2)} km N, ${e.latlng.lng.toFixed(2)} km E
                     `);
                 });
                 alert("Haz clic en el mapa para colocar el marcador");
             }
         });
 
-        // 9. ACTUALIZAR ESCALA AL CAMBIAR ZOOM
-        map.on('zoomend', updateScaleInfo);
+        // 11. INICIALIZACIÓN
+        map.on('zoomend moveend', updateScaleInfo);
         updateScaleInfo();
-
-        // 10. AJUSTE FINAL
-        setTimeout(() => {
-            map.invalidateSize();
-        }, 100);
+        setTimeout(() => map.invalidateSize(), 100);
     </script>
 </body>
 </html>
