@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa Interactivo (4100×3146)</title>
+    <title>Mapa Escalado a 100km</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -39,138 +39,96 @@
     <div id="map"></div>
     <div id="controls">
         <button id="addMarkerBtn">Añadir Marcador</button>
-        <button id="saveMarkersBtn">Guardar Marcadores</button>
-        <div id="markerInfo"></div>
+        <div id="scaleInfo" style="margin-top: 10px;"></div>
     </div>
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 1. CONFIGURACIÓN INICIAL DEL MAPA
+        // 1. CONFIGURACIÓN DE ESCALA (100km)
+        const imageWidthPixels = 4100;   // Ancho en píxeles
+        const imageHeightPixels = 3146; // Alto en píxeles
+        const imageWidthKm = 100;        // Ancho deseado en km (100km)
+        
+        // Calcular relación píxeles/km
+        const pixelsPerKm = imageWidthPixels / imageWidthKm;
+        
+        // 2. CONFIGURACIÓN DEL MAPA
         const map = L.map('map', {
-            minZoom: 1,
-            maxZoom: 10,
-            zoomDelta: 0.5,
             crs: L.CRS.Simple,
+            minZoom: -2,  // Permite alejarse más
+            maxZoom: 5,
+            zoomSnap: 0.1,
+            zoomDelta: 0.2,
+            wheelPxPerZoomLevel: 60,
             zoomControl: false
         });
 
-        // 2. DIMENSIONES DE LA IMAGEN (4100×3146 píxeles)
-        const imageWidth = 3280;   // Ancho (X)
-        const imageHeight = 2517;  // Alto (Y)
+        // 3. DEFINIR LÍMITES (coordenadas [Y, X] en km)
+        const bounds = [
+            [0, 0],
+            [imageHeightPixels / pixelsPerKm, imageWidthKm] // [altura_km, ancho_km]
+        ];
+        
+        // 4. AÑADIR IMAGEN
+        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', [
+            [0, 0],
+            [imageHeightPixels / pixelsPerKm, imageWidthKm]
+        ]).addTo(map);
 
-        // 3. DEFINIR LÍMITES DEL MAPA (en coordenadas [Y, X])
-        const bounds = [[0, 0], [imageHeight, imageWidth]];
-        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
-        map.setMaxBounds(bounds);
+        // 5. CONFIGURAR VISTA INICIAL (zoom 0 = vista de 100km)
+        map.setView([bounds[1][0]/2, bounds[1][1]/2], 0);
 
-        // 4. CENTRAR Y ESTABLECER ZOOM INICIAL (7)
-        const centerY = imageHeight / 2;  // 1573
-        const centerX = imageWidth / 2;   // 2050
-        map.setView([centerY, centerX], -5);  // Zoom inicial 3
+        // 6. ACTUALIZAR INFO DE ESCALA
+        function updateScaleInfo() {
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            const bounds = map.getBounds();
+            const widthKm = bounds.getEast() - bounds.getWest();
+            const heightKm = bounds.getNorth() - bounds.getSouth();
+            
+            document.getElementById('scaleInfo').innerHTML = `
+                <strong>Vista actual:</strong><br>
+                Zoom: ${zoom.toFixed(1)}<br>
+                Ancho: ${widthKm.toFixed(1)} km<br>
+                Alto: ${heightKm.toFixed(1)} km
+            `;
+        }
 
-        // 5. ESCALA EN KILÓMETROS
+        // 7. CONTROL DE ESCALA EN KM
         L.control.scale({
             imperial: false,
             metric: true,
+            maxWidth: 200,
             position: 'bottomleft'
         }).addTo(map);
 
-        // 6. FUNCIONALIDAD DE MARCADORES
-        let markers = [];
-        let isAddingMarker = false;
-        let markerCounter = 1;
-
-        // Elementos de la interfaz
+        // 8. FUNCIONALIDAD DE MARCADORES (adaptada a la nueva escala)
         const addMarkerBtn = document.getElementById('addMarkerBtn');
-        const saveMarkersBtn = document.getElementById('saveMarkersBtn');
-        const markerInfo = document.getElementById('markerInfo');
-
-        // Función para convertir píxeles a coordenadas del mapa
-        function pixelToCoords(x, y) {
-            return [y, x];  // Leaflet usa [Y, X]
-        }
-
-        // Añadir marcador
-        function addMarker(coords, name = null) {
-            const nameToUse = name || `Marcador ${markerCounter++}`;
-            const marker = L.marker(coords, {
-                draggable: true
-            }).addTo(map);
-            
-            marker.bindPopup(nameToUse);
-            
-            markers.push({
-                marker: marker,
-                name: nameToUse,
-                coords: coords,
-                pixelCoords: [Math.round(coords[1]), Math.round(coords[0])]  // [X, Y]
-            });
-            
-            updateMarkerInfo();
-        }
-
-        // Actualizar lista de marcadores
-        function updateMarkerInfo() {
-            markerInfo.innerHTML = `<h3>Marcadores (${markers.length})</h3>`;
-            markers.forEach((m, i) => {
-                markerInfo.innerHTML += `
-                    <div>
-                        ${i+1}. ${m.name} 
-                        (X: ${m.pixelCoords[0]}, Y: ${m.pixelCoords[1]})
-                        <button onclick="removeMarker(${i})">Eliminar</button>
-                    </div>
-                `;
-            });
-        }
-
-        // Eliminar marcador
-        window.removeMarker = function(index) {
-            map.removeLayer(markers[index].marker);
-            markers.splice(index, 1);
-            updateMarkerInfo();
-        }
-
-        // Evento para añadir marcadores
+        
         addMarkerBtn.addEventListener('click', function() {
-            isAddingMarker = !isAddingMarker;
-            this.textContent = isAddingMarker ? 'Cancelar' : 'Añadir Marcador';
-            
-            if (isAddingMarker) {
-                map.on('click', function(e) {
-                    const name = prompt("Nombre del marcador:");
-                    if (name) {
-                        addMarker([e.latlng.lat, e.latlng.lng], name);
-                    }
-                    isAddingMarker = false;
-                    addMarkerBtn.textContent = 'Añadir Marcador';
-                    map.off('click');
+            const name = prompt("Nombre del marcador:");
+            if (name) {
+                map.once('click', function(e) {
+                    const marker = L.marker([e.latlng.lat, e.latlng.lng], {
+                        draggable: true
+                    }).addTo(map);
+                    
+                    marker.bindPopup(`
+                        <b>${name}</b><br>
+                        Coordenadas: ${e.latlng.lat.toFixed(2)} km N, ${e.latlng.lng.toFixed(2)} km E
+                    `);
                 });
-            } else {
-                map.off('click');
+                alert("Haz clic en el mapa para colocar el marcador");
             }
         });
 
-        // Guardar marcadores en JSON
-        saveMarkersBtn.addEventListener('click', function() {
-            const data = markers.map(m => ({
-                name: m.name,
-                x: m.pixelCoords[0],
-                y: m.pixelCoords[1]
-            }));
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'marcadores.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        });
+        // 9. ACTUALIZAR ESCALA AL CAMBIAR ZOOM
+        map.on('zoomend', updateScaleInfo);
+        updateScaleInfo();
 
-        // Ajuste final para asegurar la visualización
+        // 10. AJUSTE FINAL
         setTimeout(() => {
             map.invalidateSize();
         }, 100);
