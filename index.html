@@ -26,45 +26,40 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // Configuración del mapa
+        // Configuración inicial del mapa
         const map = L.map('map', {
             minZoom: 1,
             maxZoom: 10,
             zoomDelta: 0.5,
-            crs: L.CRS.Simple,
-            zoomControl: false  // Desactivamos el control por defecto para crear uno personalizado
+            crs: L.CRS.Simple
         }).setView([96, 128], 1.5);
-
-        // Dimensiones reales de tu imagen (1920x1440px)
-        const imageWidth = 1920;
-        const imageHeight = 1440;
         
-        // Definimos las coordenadas del mapa para que coincidan con las dimensiones de la imagen
-        const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
-        const northEast = map.unproject([imageWidth, 0], map.getMaxZoom()-1);
-        const bounds = new L.LatLngBounds(southWest, northEast);
+        // Dimensiones de la imagen del mapa (1920x1440px → relación 1.33:1)
+        // Mantenemos tus dimensiones originales (192x256) pero ajustadas a tu imagen
+        const mapBounds = [[0, 0], [192, 256]];
         
-        // Añadir la imagen del mapa
-        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
+        // Añadir la imagen del mapa desde Imgur
+        L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', mapBounds).addTo(map);
         
         // Establecer los límites del mapa
-        map.setMaxBounds(bounds);
+        map.setMaxBounds(mapBounds);
         
-        // Añadir control de zoom personalizado que sí funcionará
-        L.control.zoom({
-            position: 'topright'
-        }).addTo(map);
+        // Añadir marcador "Oracle" con el icono predeterminado de Leaflet
+        // (Coordenadas de ejemplo - ajústalas según tu mapa)
+        const oracleMarker = L.marker([80, 120]).addTo(map);
+        oracleMarker.bindPopup("Oracle");
         
-        // Añadir escala en kilómetros
+        // Añadir escala en kilómetros (exclusivamente Leaflet)
         L.control.scale({
-            imperial: false,
-            metric: true,
+            imperial: false,  // Desactivar millas
+            metric: true,     // Activar kilómetros
             position: 'bottomleft'
         }).addTo(map);
         
-        // Añadir marcador (coordenadas ajustadas al nuevo sistema)
-        const oracleMarker = L.marker(map.unproject([1200, 900], map.getMaxZoom()-1)).addTo(map);
-        oracleMarker.bindPopup("Oracle");
+        // Añadir controles de zoom estándar de Leaflet
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
     </script>
 </body>
 </html>
