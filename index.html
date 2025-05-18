@@ -49,16 +49,16 @@
     <script>
         // Configuración del mapa
         const map = L.map('map', {
-            minZoom: 1,
+            minZoom: 3,  // Aumentamos el zoom mínimo para que se vea más cercano
             maxZoom: 10,
             zoomDelta: 0.5,
             crs: L.CRS.Simple,
-            zoomControl: false  // Desactivamos completamente los controles de zoom
-        }).setView([96, 128], 1.5);
+            zoomControl: false
+        }).setView([96, 128], 3.5);  // Aumentamos el zoom inicial
 
         // Dimensiones reales de tu imagen (1920x1440px)
-        const imageWidth = 4100;
-        const imageHeight = 3146;
+        const imageWidth = 1920;
+        const imageHeight = 1440;
         
         // Definimos las coordenadas del mapa
         const southWest = map.unproject([0, imageHeight], map.getMaxZoom()-1);
@@ -68,8 +68,15 @@
         // Añadir la imagen del mapa
         L.imageOverlay('https://i.imgur.com/2W2bOOt.jpeg', bounds).addTo(map);
         
-        // Establecer los límites del mapa
-        map.setMaxBounds(bounds);
+        // Establecer los límites del mapa con padding para que no se salga
+        map.setMaxBounds(bounds.pad(0.5));
+
+        // Ajustamos el zoom máximo para que no se pueda alejar demasiado
+        map.on('zoomend', function() {
+            if (map.getZoom() < 3) {
+                map.setZoom(3);
+            }
+        });
         
         // Añadir escala en kilómetros
         L.control.scale({
@@ -184,8 +191,11 @@
             URL.revokeObjectURL(url);
         });
 
-        // Ejemplo: Añadir marcador inicial (opcional)
-        // addMarker(map.unproject([1200, 900], map.getMaxZoom()-1), "Oracle");
+        // Ajuste inicial para que el mapa se vea más cercano
+        setTimeout(() => {
+            map.invalidateSize();
+            map.setZoom(3.5);
+        }, 100);
     </script>
 </body>
 </html>
